@@ -1,0 +1,70 @@
+custom:
+  secrets: ${file(.secrets.json)}
+  serverless-offline:
+    noPrependStageInUrl: true
+
+service: jwt-demo
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  stage: dev
+  region: ${self:custom.secrets.AWS_REGION}
+  apiGateway:
+    apiKeys:
+      - myApiKey
+  # iam:
+  #   role: arn:aws:iam::356353652680:role/atlasDBaccessRole
+  environment:
+    JWT_SECRET: ${self:custom.secrets.JWT_SECRET}
+    AWS_ID: ${self:custom.secrets.AWS_ID}
+    MONGODB_URI: ${self:custom.secrets.MONGODB_URI}
+    MONGODB_DATABASE: ${self:custom.secrets.MONGODB_DATABASE}
+    DATABASE_TYPE: ${self:custom.secrets.DATABASE_TYPE}
+  lambdaHashingVersion: "20201221"
+  
+functions:
+  verify-token:
+    handler: functions/authorize.handler
+  me:
+    handler: functions/me.handler
+    events:
+      - http:
+          path: me
+          method: get
+          cors: true
+          authorizer:
+            name: verify-token
+                        # this tells the lambda where to take the information from, 
+                        # in our case the HTTP Authorization header
+            identitySource: method.request.header.Authorization 
+            resultTtlInSeconds: 3600 # cache the result for 1 hour
+  login:
+    handler: functions/login.handler
+    events:
+      - http:
+          path: login
+          method: post
+          cors: true
+          private: true
+  register:
+    handler: functions/register.handler
+    events:
+      - http:
+          path: register
+          method: post
+          cors: true
+          private: true
+resources:
+   Resources:
+     Unauthorized:
+       Type: 'AWS::ApiGateway::GatewayResponse'
+       Properties:
+         ResponseParameters:
+           gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+           gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+         ResponseType: DEFAULT_4XX
+         RestApiId:
+           Ref: 'ApiGatewayRestApi'
+plugins:
+  - serverless-offline
