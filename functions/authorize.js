@@ -37,8 +37,24 @@ module.exports.handler = function verifyToken(event, context, callback) {
   // verifies token
   const decoded = jwt.verify(token, secret);
   if (decoded && decoded.id) {
+
+
+
+
+
+
+
+
+
     return callback(null, generateAuthResponse(decoded.id, "Allow", methodArn));
   } else {
+
+
+
+
+
+
+    
     return callback(null, generateAuthResponse(decoded.id, "Deny", methodArn));
   }
 };
